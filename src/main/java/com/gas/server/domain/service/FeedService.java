@@ -16,6 +16,7 @@ import com.gas.server.domain.repository.MemberRepository;
 import com.gas.server.domain.repository.projection.FeedLikeCount;
 import com.gas.server.global.exception.BusinessException;
 import com.gas.server.global.exception.ErrorType;
+import com.gas.server.global.fcm.FcmService;
 import com.gas.server.global.openai.OpenAIService;
 import com.gas.server.global.s3.S3Service;
 import java.time.LocalDate;
@@ -45,6 +46,8 @@ public class FeedService {
     private final MemberMissionRepository memberMissionRepository;
     private final S3Service s3Service;
     private final OpenAIService openAIService;
+    private final FcmService fcmService;
+    private final MissionService missionService;
 
     @Transactional(readOnly = true)
     public FeedListResponse getFeeds(final Long memberId, final LocalDate date) {
@@ -131,9 +134,8 @@ public class FeedService {
             final String text
     ) {
         // 회원 존재 여부 확인
-        if (!memberRepository.existsById(memberId)) {
-            throw new BusinessException(ErrorType.NOT_FOUND_MEMBER_ERROR);
-        }
+        MemberEntity member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new BusinessException(ErrorType.NOT_FOUND_MEMBER_ERROR));
 
         // S3에 파일 업로드
         String mediaUrl = s3Service.uploadFile(media);
@@ -150,17 +152,11 @@ public class FeedService {
         feed = feedRepository.save(feed);
         log.info("Feed saved successfully for member: {}", memberId);
 
+        // 새로운 피드 업로드 푸시 알림 전송
+        fcmService.sendNewFeedNotification(memberId, member.getNickname());
+
         // 미션 2: 오늘의 사진 업로드 시 완료
-        if (!memberMissionRepository.existsByMemberIdAndMissionIdAndMissionDate(memberId, 2L, LocalDate.now())) {
-            memberMissionRepository.save(
-                    com.gas.server.domain.entity.MemberMissionEntity.builder()
-                            .memberId(memberId)
-                            .missionId(2L)
-                            .missionDate(LocalDate.now())
-                            .build()
-            );
-            log.info("Mission (ID: 2) completed for member: {}", memberId);
-        }
+        missionService.completeMission(memberId, 2L);
 
         // 비동기로 태그 생성 및 업데이트
         if (s3Service.isImageFile(media)) {
@@ -177,32 +173,17 @@ public class FeedService {
     }
 
     @Async
-    @Transactional
     public void processTagGenerationAsync(Long feedId, Long memberId, String mediaUrl, String text) {
         try {
             // OpenAI Vision API 호출
             OpenAIService.TagGenerationResult result = openAIService.generateTagsWithFoodDetection(mediaUrl, text);
 
-            // 태그 업데이트
-            FeedEntity feed = feedRepository.findById(feedId).orElse(null);
-            if (feed != null && result.getTags() != null) {
-                feed.updateTag(result.getTags());
-                feedRepository.save(feed);
-                log.info("Tags updated for feed {}: {}", feedId, result.getTags());
-            }
+            // 태그 업데이트 (트랜잭션 내에서 처리)
+            updateFeedTag(feedId, result.getTags());
 
             // 음식 감지 시 미션 4 완료
-            if (result.isFoodDetected() &&
-                    !memberMissionRepository.existsByMemberIdAndMissionIdAndMissionDate(memberId, 4L,
-                            LocalDate.now())) {
-                memberMissionRepository.save(
-                        com.gas.server.domain.entity.MemberMissionEntity.builder()
-                                .memberId(memberId)
-                                .missionId(4L)
-                                .missionDate(LocalDate.now())
-                                .build()
-                );
-                log.info("Food mission (ID: 4) completed for member: {}", memberId);
+            if (result.isFoodDetected()) {
+                missionService.completeMission(memberId, 4L);
             }
         } catch (Exception e) {
             log.error("Failed to generate tags for feed {}: {}", feedId, e.getMessage());
@@ -210,17 +191,12 @@ public class FeedService {
     }
 
     @Async
-    @Transactional
     public void processVideoTagGenerationAsync(Long feedId, String text) {
         try {
             String tags = openAIService.generateTagsForVideo(text);
-
-            FeedEntity feed = feedRepository.findById(feedId).orElse(null);
-            if (feed != null && tags != null) {
-                feed.updateTag(tags);
-                feedRepository.save(feed);
-                log.info("Video tags updated for feed {}: {}", feedId, tags);
-            }
+            
+            // 태그 업데이트 (트랜잭션 내에서 처리)
+            updateFeedTag(feedId, tags);
         } catch (Exception e) {
             log.error("Failed to generate video tags for feed {}: {}", feedId, e.getMessage());
         }
@@ -251,16 +227,8 @@ public class FeedService {
                         .build()
         );
 
-        if (!memberMissionRepository.existsByMemberIdAndMissionIdAndMissionDate(memberId, 3L, LocalDate.now())) {
-            memberMissionRepository.save(
-                    com.gas.server.domain.entity.MemberMissionEntity.builder()
-                            .memberId(memberId)
-                            .missionId(3L)
-                            .missionDate(LocalDate.now())
-                            .build()
-            );
-            log.info("Mission (ID: 3) completed for member: {}", memberId);
-        }
+        // 미션 3: 좋아요 누르기 완료
+        missionService.completeMission(memberId, 3L);
     }
 
     @Transactional
@@ -294,7 +262,7 @@ public class FeedService {
 
             // 해당 월의 모든 피드 조회
             List<FeedEntity> feeds = feedRepository.findAllByCreatedAtBetween(startDateTime, endDateTime);
-            
+
             // 피드에서 날짜만 추출하여 중복 제거 및 정렬
             List<LocalDate> feedDates = feeds.stream()
                     .map(feed -> feed.getCreatedAt().toLocalDate())
@@ -305,6 +273,20 @@ public class FeedService {
             return FeedDateListResponse.of(feedDates);
         } catch (DateTimeParseException e) {
             throw new BusinessException(ErrorType.INVALID_DATE_TIME_FORMAT_ERROR);
+        }
+    }
+    
+    @Transactional
+    public void updateFeedTag(Long feedId, String tags) {
+        if (tags == null) {
+            return;
+        }
+        
+        FeedEntity feed = feedRepository.findById(feedId).orElse(null);
+        if (feed != null) {
+            feed.updateTag(tags);
+            feedRepository.save(feed);
+            log.info("Tags updated for feed {}: {}", feedId, tags);
         }
     }
 }

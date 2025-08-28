@@ -35,6 +35,7 @@ public class HomeService {
     private final FeedRepository feedRepository;
     private final MissionRepository missionRepository;
     private final MemberMissionRepository memberMissionRepository;
+    private final MissionService missionService;
 
     @Transactional
     public SignUpResponse signUp(final String nickname, final ProfileType profileType) {
@@ -58,15 +59,8 @@ public class HomeService {
             throw new BusinessException(ErrorType.NOT_FOUND_MEMBER_ERROR);
         }
 
-        if (!memberMissionRepository.existsByMemberIdAndMissionIdAndMissionDate(memberId, 1L, LocalDate.now())) {
-            memberMissionRepository.save(
-                    MemberMissionEntity.builder()
-                            .memberId(memberId)
-                            .missionId(1L)
-                            .missionDate(LocalDate.now())
-                            .build()
-            );
-        }
+        // 미션 1: 앱 실행 시 완료
+        missionService.completeMission(memberId, 1L);
 
         List<DailyMission> dailyMissions = getDailyMissions(memberId);
 
@@ -142,7 +136,7 @@ public class HomeService {
     private List<WeeklyRankingItem> calculateAllMemberRankings(final Long requestingMemberId) {
         Map<Long, Integer> memberScores = calculateMemberScores();
         List<MemberEntity> allMembers = memberRepository.findAll();
-        
+
         return allMembers.stream()
                 .map(member -> {
                     Integer score = memberScores.getOrDefault(member.getId(), 0);
@@ -152,7 +146,7 @@ public class HomeService {
                 .sorted((a, b) -> b.score().compareTo(a.score())) // 점수 내림차순 정렬
                 .toList();
     }
-    
+
     private List<WeeklyRankingItem> getWeeklyRankingList(final Long memberId) {
         return calculateAllMemberRankings(memberId);
     }

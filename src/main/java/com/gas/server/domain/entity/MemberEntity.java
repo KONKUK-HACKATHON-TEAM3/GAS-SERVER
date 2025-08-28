@@ -31,14 +31,23 @@ public class MemberEntity {
     @Column(name = "profile_type", length = 20, nullable = false)
     private ProfileType profileType;
 
+    @Column(name = "fcm_token", length = 500)
+    private String fcmToken;
+
     @Builder
     public MemberEntity(
             Long id,
             String nickname,
-            ProfileType profileType
+            ProfileType profileType,
+            String fcmToken
     ) {
         this.id = id;
         this.nickname = nickname;
         this.profileType = profileType;
+        this.fcmToken = fcmToken;
+    }
+
+    public void updateFcmToken(String fcmToken) {
+        this.fcmToken = fcmToken;
     }
 }
