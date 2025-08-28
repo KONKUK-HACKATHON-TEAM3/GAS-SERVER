@@ -250,6 +250,17 @@ public class FeedService {
                         .feedId(feedId)
                         .build()
         );
+
+        if (!memberMissionRepository.existsByMemberIdAndMissionIdAndMissionDate(memberId, 3L, LocalDate.now())) {
+            memberMissionRepository.save(
+                    com.gas.server.domain.entity.MemberMissionEntity.builder()
+                            .memberId(memberId)
+                            .missionId(3L)
+                            .missionDate(LocalDate.now())
+                            .build()
+            );
+            log.info("Mission (ID: 3) completed for member: {}", memberId);
+        }
     }
 
     @Transactional
@@ -267,25 +278,25 @@ public class FeedService {
         // 좋아요 삭제
         memberLikeRepository.deleteByMemberIdAndFeedId(memberId, feedId);
     }
-    
+
     @Transactional(readOnly = true)
     public FeedDateListResponse getFeedDates(final String yearMonth) {
         try {
             // yyyy-MM 형식 파싱
             YearMonth ym = YearMonth.parse(yearMonth);
-            
+
             // 해당 월의 시작일과 종료일 계산
             LocalDate startDate = ym.atDay(1);
             LocalDate endDate = ym.atEndOfMonth();
-            
+
             LocalDateTime startDateTime = startDate.atStartOfDay();
             LocalDateTime endDateTime = endDate.plusDays(1).atStartOfDay();
-            
+
             // 해당 월에 피드가 있는 날짜들 조회
             List<LocalDate> feedDates = feedRepository.findDistinctDatesByCreatedAtBetween(
                     startDateTime, endDateTime
             );
-            
+
             return FeedDateListResponse.of(feedDates);
         } catch (DateTimeParseException e) {
             throw new BusinessException(ErrorType.INVALID_DATE_TIME_FORMAT_ERROR);
