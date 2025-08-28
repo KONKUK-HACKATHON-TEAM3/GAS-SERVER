@@ -15,13 +15,13 @@ public interface FeedRepository extends JpaRepository<FeedEntity, Long> {
             LocalDateTime end
     );
 
-    @Query("""
-            SELECT DISTINCT DATE(f.createdAt)
-            FROM FeedEntity f
-            WHERE f.createdAt >= :startDate
-              AND f.createdAt <  :endDate
-            ORDER BY DATE(f.createdAt)
-            """)
+    @Query(value = """
+            SELECT DISTINCT CAST(f.created_at AS date) 
+            FROM feed f
+            WHERE f.created_at >= :startDate
+              AND f.created_at < :endDate
+            ORDER BY CAST(f.created_at AS date)
+            """, nativeQuery = true)
     List<LocalDate> findDistinctDatesByCreatedAtBetween(
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate
