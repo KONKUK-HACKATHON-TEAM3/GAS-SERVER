@@ -8,12 +8,12 @@ import org.springframework.web.bind.annotation.RequestHeader;
 
 @FeignClient(
         name = "openAiClient",
-        url = "${openai.api.url}",
+        url = "https://api.openai.com",
         configuration = FeignConfig.class
 )
 public interface OpenAIClient {
 
-    @PostMapping
+    @PostMapping("/v1/chat/completions")
     OpenAIResponse generateCompletion(
             @RequestHeader("Authorization") String authorization,
             @RequestBody OpenAIRequest request
