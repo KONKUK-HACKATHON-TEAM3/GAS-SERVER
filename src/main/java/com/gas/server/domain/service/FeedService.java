@@ -9,6 +9,7 @@ import com.gas.server.domain.entity.FeedEntity;
 import com.gas.server.domain.entity.MemberEntity;
 import com.gas.server.domain.repository.FeedRepository;
 import com.gas.server.domain.repository.MemberLikeRepository;
+import com.gas.server.domain.repository.MemberMissionRepository;
 import com.gas.server.domain.repository.MemberRepository;
 import com.gas.server.domain.repository.projection.FeedLikeCount;
 import com.gas.server.global.exception.BusinessException;
@@ -25,7 +26,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 @Slf4j
@@ -36,6 +36,7 @@ public class FeedService {
     private final FeedRepository feedRepository;
     private final MemberRepository memberRepository;
     private final MemberLikeRepository memberLikeRepository;
+    private final MemberMissionRepository memberMissionRepository;
     private final S3Service s3Service;
     private final OpenAIService openAIService;
 
@@ -118,7 +119,11 @@ public class FeedService {
     }
 
     @Transactional
-    public void postFeed(Long memberId, MultipartFile media, String text) {
+    public void postFeed(
+            final Long memberId,
+            final MultipartFile media,
+            final String text
+    ) {
         // 회원 존재 여부 확인
         if (!memberRepository.existsById(memberId)) {
             throw new BusinessException(ErrorType.NOT_FOUND_MEMBER_ERROR);
@@ -129,7 +134,7 @@ public class FeedService {
         log.info("File uploaded to S3: {}", mediaUrl);
 
         // 태그 생성
-        String tags = null;
+        String tags;
 
         if (s3Service.isImageFile(media)) {
             // 이미지인 경우 OpenAI Vision API 호출
@@ -152,6 +157,16 @@ public class FeedService {
                 .text(text)
                 .tag(tags)
                 .build();
+
+        if (!memberMissionRepository.existsByMemberIdAndMissionIdAndMissionDate(memberId, 2L, LocalDate.now())) {
+            memberMissionRepository.save(
+                    com.gas.server.domain.entity.MemberMissionEntity.builder()
+                            .memberId(memberId)
+                            .missionId(2L)
+                            .missionDate(LocalDate.now())
+                            .build()
+            );
+        }
 
         feedRepository.save(feed);
         log.info("Feed saved successfully for member: {}", memberId);

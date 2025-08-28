@@ -29,7 +29,7 @@ public class FeedController {
 
     private final FeedService feedService;
 
-    @GetMapping(path = "/feeds")
+    @GetMapping(path = "/feeds", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<FeedListResponse> getFeeds(
             @RequestParam @Positive(message = "memberId는 양수여야 합니다.") Long memberId,
             @RequestParam @DateTimeFormat(iso = ISO.DATE) LocalDate date
