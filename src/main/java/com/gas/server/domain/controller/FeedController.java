@@ -1,5 +1,6 @@
 package com.gas.server.domain.controller;
 
+import com.gas.server.domain.dto.FeedDateListResponse;
 import com.gas.server.domain.dto.FeedListResponse;
 import com.gas.server.domain.service.FeedService;
 import com.gas.server.global.exception.BusinessException;
@@ -74,5 +75,14 @@ public class FeedController {
         feedService.deleteLike(memberId, feedId);
 
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(path = "/feeds/dates", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<FeedDateListResponse> getFeedDates(
+            @RequestParam @DateTimeFormat(pattern = "yyyy-MM") String yearMonth
+    ) {
+        return ResponseEntity.ok(
+                feedService.getFeedDates(yearMonth)
+        );
     }
 }

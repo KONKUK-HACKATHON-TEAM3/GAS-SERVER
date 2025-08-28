@@ -4,6 +4,7 @@ import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
 import com.gas.server.domain.dto.Feed;
+import com.gas.server.domain.dto.FeedDateListResponse;
 import com.gas.server.domain.dto.FeedListResponse;
 import com.gas.server.domain.entity.FeedEntity;
 import com.gas.server.domain.entity.MemberEntity;
@@ -19,6 +20,8 @@ import com.gas.server.global.openai.OpenAIService;
 import com.gas.server.global.s3.S3Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -263,5 +266,29 @@ public class FeedService {
 
         // 좋아요 삭제
         memberLikeRepository.deleteByMemberIdAndFeedId(memberId, feedId);
+    }
+    
+    @Transactional(readOnly = true)
+    public FeedDateListResponse getFeedDates(final String yearMonth) {
+        try {
+            // yyyy-MM 형식 파싱
+            YearMonth ym = YearMonth.parse(yearMonth);
+            
+            // 해당 월의 시작일과 종료일 계산
+            LocalDate startDate = ym.atDay(1);
+            LocalDate endDate = ym.atEndOfMonth();
+            
+            LocalDateTime startDateTime = startDate.atStartOfDay();
+            LocalDateTime endDateTime = endDate.plusDays(1).atStartOfDay();
+            
+            // 해당 월에 피드가 있는 날짜들 조회
+            List<LocalDate> feedDates = feedRepository.findDistinctDatesByCreatedAtBetween(
+                    startDateTime, endDateTime
+            );
+            
+            return FeedDateListResponse.of(feedDates);
+        } catch (DateTimeParseException e) {
+            throw new BusinessException(ErrorType.INVALID_DATE_TIME_FORMAT_ERROR);
+        }
     }
 }
