@@ -18,3 +18,5 @@ out/
 
 *.yml
 application.properties
+
+firebase-adminsdk.json
