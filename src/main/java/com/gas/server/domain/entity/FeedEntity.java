@@ -45,12 +45,14 @@ public class FeedEntity {
     @Builder
     public FeedEntity(
             Long id,
+            Long memberId,
             String imageUrl,
             String text,
             String tag,
             LocalDateTime createdAt
     ) {
         this.id = id;
+        this.memberId = memberId;
         this.imageUrl = imageUrl;
         this.text = text;
         this.tag = tag;
