@@ -135,12 +135,19 @@ public class FeedService {
 
         // 태그 생성
         String tags;
+        boolean foodDetected = false;
 
         if (s3Service.isImageFile(media)) {
             // 이미지인 경우 OpenAI Vision API 호출
-            tags = openAIService.generateTags(mediaUrl, text);
+            OpenAIService.TagGenerationResult result = openAIService.generateTagsWithFoodDetection(mediaUrl, text);
+            tags = result.getTags();
+            foodDetected = result.isFoodDetected();
+
             if (tags != null) {
                 log.info("Generated tags for image: {}", tags);
+                if (foodDetected) {
+                    log.info("Food detected in image");
+                }
             }
         } else {
             // 비디오인 경우 텍스트가 있을 때만 태그 생성
@@ -158,6 +165,7 @@ public class FeedService {
                 .tag(tags)
                 .build();
 
+        // 미션 2: 오늘의 사진 업로드 시 완료
         if (!memberMissionRepository.existsByMemberIdAndMissionIdAndMissionDate(memberId, 2L, LocalDate.now())) {
             memberMissionRepository.save(
                     com.gas.server.domain.entity.MemberMissionEntity.builder()
@@ -166,6 +174,20 @@ public class FeedService {
                             .missionDate(LocalDate.now())
                             .build()
             );
+            log.info("Mission (ID: 2) completed for member: {}", memberId);
+        }
+
+        // 미션 3: 음식 사진 업로드 시 완료
+        if (foodDetected &&
+                !memberMissionRepository.existsByMemberIdAndMissionIdAndMissionDate(memberId, 4L, LocalDate.now())) {
+            memberMissionRepository.save(
+                    com.gas.server.domain.entity.MemberMissionEntity.builder()
+                            .memberId(memberId)
+                            .missionId(4L)
+                            .missionDate(LocalDate.now())
+                            .build()
+            );
+            log.info("Mission (ID: 4) completed for member: {}", memberId);
         }
 
         feedRepository.save(feed);

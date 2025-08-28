@@ -25,6 +25,9 @@ public class OpenAIService {
             당신은 가족 간 일상 공유 서비스의 태그 생성 전문가입니다.
             가족들이 서로의 꾸밈없는 일상을 공유하는 사진과 텍스트를 분석하여 따뜻하고 구체적인 태그를 생성해주세요.
             
+            중요: 이미지에 음식이 포함되어 있는 경우, 반드시 응답 시작 부분에 "[FOOD_DETECTED]"를 포함시켜주세요.
+            음식 판단 기준: 요리, 식사, 간식, 음료, 디저트, 과일, 채소 등 모든 먹을 수 있는 것들
+            
             태그 생성 가이드라인:
             1. 2~4개 사이의 한글 태그를 생성
             2. 구체적이고 직관적인 내용 우선 (예: #찜닭, #저녁식사, #카페, #산책)
@@ -32,13 +35,35 @@ public class OpenAIService {
             4. 가족 관련 키워드가 있다면 우선 포함
             5. 일반적인 태그보다 구체적인 상황 설명을 선호
             
-            좋은 예시: "#찜닭, #저녁, #맛있다, #피곤이싹"
+            응답 형식:
+            - 음식 사진인 경우: "[FOOD_DETECTED] #태그1, #태그2, #태그3"
+            - 음식이 아닌 경우: "#태그1, #태그2, #태그3"
+            
+            좋은 예시: "[FOOD_DETECTED] #찜닭, #저녁, #맛있다, #피곤이싹"
             나쁜 예시: "#음식, #일상, #기록, #추억"
             
             태그는 콤마로 구분하여 반환하고, 각 태그는 앞에 #을 달아서 10자 이내로 작성해주세요.
             """;
 
-    public String generateTags(String imageUrl, String text) {
+    public static class TagGenerationResult {
+        private final String tags;
+        private final boolean foodDetected;
+
+        public TagGenerationResult(String tags, boolean foodDetected) {
+            this.tags = tags;
+            this.foodDetected = foodDetected;
+        }
+
+        public String getTags() {
+            return tags;
+        }
+
+        public boolean isFoodDetected() {
+            return foodDetected;
+        }
+    }
+
+    public TagGenerationResult generateTagsWithFoodDetection(String imageUrl, String text) {
         try {
             String userPrompt = buildUserPrompt(text);
 
@@ -55,13 +80,19 @@ public class OpenAIService {
 
             String content = response.getContent();
             if (StringUtils.hasText(content)) {
-                return cleanTags(content);
+                boolean foodDetected = content.contains("[FOOD_DETECTED]");
+                String cleanedTags = cleanTags(content.replace("[FOOD_DETECTED]", "").trim());
+                return new TagGenerationResult(cleanedTags, foodDetected);
             }
-            return generateContextualTags(text);
+            return new TagGenerationResult(generateContextualTags(text), false);
         } catch (Exception e) {
             log.error("Failed to generate tags from OpenAI", e);
-            return generateContextualTags(text);
+            return new TagGenerationResult(generateContextualTags(text), false);
         }
+    }
+
+    public String generateTags(String imageUrl, String text) {
+        return generateTagsWithFoodDetection(imageUrl, text).getTags();
     }
 
     public String generateTagsForVideo(String text) {
