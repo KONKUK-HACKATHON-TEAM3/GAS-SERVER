@@ -16,8 +16,10 @@ public enum ProfileType {
     GRANDMOTHER,
     BOY,
     GIRL,
-    MAN,
-    WOMAN,
+    MAN_1,
+    WOMAN_1,
+    MAN_2,
+    WOMAN_2,
     ;
 
     private static final Map<String, ProfileType> PROFILE_TYPE_MAP = new HashMap<>();
