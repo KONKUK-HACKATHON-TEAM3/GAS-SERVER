@@ -30,4 +30,8 @@ public interface MemberLikeRepository extends JpaRepository<MemberLikeEntity, Lo
     List<FeedLikeCount> countByFeedIds(
             @Param("feedIds") List<Long> feedIds
     );
+
+    boolean existsByMemberIdAndFeedId(Long memberId, Long feedId);
+
+    void deleteByMemberIdAndFeedId(Long memberId, Long feedId);
 }

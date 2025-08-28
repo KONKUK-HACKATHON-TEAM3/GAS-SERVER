@@ -13,7 +13,9 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -50,6 +52,26 @@ public class FeedController {
         }
 
         feedService.postFeed(memberId, media, text);
+
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(path = "/feeds/{feedId}")
+    public ResponseEntity<Void> postLike(
+            @PathVariable @Positive(message = "feedId는 양수여야 합니다.") Long feedId,
+            @RequestParam @Positive(message = "memberId는 양수여야 합니다.") Long memberId
+    ) {
+        feedService.postLike(memberId, feedId);
+
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping(path = "/feeds/{feedId}")
+    public ResponseEntity<Void> deleteLike(
+            @PathVariable @Positive(message = "feedId는 양수여야 합니다.") Long feedId,
+            @RequestParam @Positive(message = "memberId는 양수여야 합니다.") Long memberId
+    ) {
+        feedService.deleteLike(memberId, feedId);
 
         return ResponseEntity.ok().build();
     }

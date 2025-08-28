@@ -7,6 +7,7 @@ import com.gas.server.domain.dto.Feed;
 import com.gas.server.domain.dto.FeedListResponse;
 import com.gas.server.domain.entity.FeedEntity;
 import com.gas.server.domain.entity.MemberEntity;
+import com.gas.server.domain.entity.MemberLikeEntity;
 import com.gas.server.domain.repository.FeedRepository;
 import com.gas.server.domain.repository.MemberLikeRepository;
 import com.gas.server.domain.repository.MemberMissionRepository;
@@ -192,5 +193,47 @@ public class FeedService {
 
         feedRepository.save(feed);
         log.info("Feed saved successfully for member: {}", memberId);
+    }
+
+    @Transactional
+    public void postLike(final Long feedId, final Long memberId) {
+        // 회원 존재 여부 확인
+        if (!memberRepository.existsById(memberId)) {
+            throw new BusinessException(ErrorType.NOT_FOUND_MEMBER_ERROR);
+        }
+
+        // 피드 존재 여부 확인
+        if (!feedRepository.existsById(feedId)) {
+            throw new BusinessException(ErrorType.NOT_FOUND_FEED_ERROR);
+        }
+
+        // 이미 좋아요를 눌렀는지 확인
+        if (memberLikeRepository.existsByMemberIdAndFeedId(memberId, feedId)) {
+            return;
+        }
+
+        // 좋아요 저장
+        memberLikeRepository.save(
+                MemberLikeEntity.builder()
+                        .memberId(memberId)
+                        .feedId(feedId)
+                        .build()
+        );
+    }
+
+    @Transactional
+    public void deleteLike(final Long feedId, final Long memberId) {
+        // 회원 존재 여부 확인
+        if (!memberRepository.existsById(memberId)) {
+            throw new BusinessException(ErrorType.NOT_FOUND_MEMBER_ERROR);
+        }
+
+        // 피드 존재 여부 확인
+        if (!feedRepository.existsById(feedId)) {
+            throw new BusinessException(ErrorType.NOT_FOUND_FEED_ERROR);
+        }
+
+        // 좋아요 삭제
+        memberLikeRepository.deleteByMemberIdAndFeedId(memberId, feedId);
     }
 }
