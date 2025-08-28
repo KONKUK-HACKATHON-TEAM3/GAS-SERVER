@@ -1,5 +1,6 @@
 package com.gas.server.domain.entity;
 
+import com.gas.server.domain.enums.ProfileType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
