@@ -123,7 +123,7 @@ public class HomeService {
                 .toList();
     }
 
-    private WeeklyRanking getWeeklyRanking(final Long memberId) {
+    private Map<Long, Integer> calculateMemberScores() {
         List<MemberMissionEntity> allCompletedMissions = memberMissionRepository.findAll();
         List<MissionEntity> allMissions = missionRepository.findAll();
 
@@ -132,11 +132,15 @@ public class HomeService {
                 .collect(Collectors.toMap(MissionEntity::getId, MissionEntity::getPoint));
 
         // 멤버별 총 점수 계산
-        Map<Long, Integer> memberScores = allCompletedMissions.stream()
+        return allCompletedMissions.stream()
                 .collect(Collectors.groupingBy(
                         MemberMissionEntity::getMemberId,
                         Collectors.summingInt(mm -> missionPointsMap.getOrDefault(mm.getMissionId(), 0))
                 ));
+    }
+
+    private WeeklyRanking getWeeklyRanking(final Long memberId) {
+        Map<Long, Integer> memberScores = calculateMemberScores();
 
         // 가장 높은 점수를 가진 멤버 찾기
         if (memberScores.isEmpty()) {
@@ -183,19 +187,7 @@ public class HomeService {
             throw new BusinessException(ErrorType.NOT_FOUND_MEMBER_ERROR);
         }
 
-        List<MemberMissionEntity> allCompletedMissions = memberMissionRepository.findAll();
-        List<MissionEntity> allMissions = missionRepository.findAll();
-
-        // 미션 ID별 포인트 매핑
-        Map<Long, Integer> missionPointsMap = allMissions.stream()
-                .collect(Collectors.toMap(MissionEntity::getId, MissionEntity::getPoint));
-
-        // 멤버별 총 점수 계산
-        Map<Long, Integer> memberScores = allCompletedMissions.stream()
-                .collect(Collectors.groupingBy(
-                        MemberMissionEntity::getMemberId,
-                        Collectors.summingInt(mm -> missionPointsMap.getOrDefault(mm.getMissionId(), 0))
-                ));
+        Map<Long, Integer> memberScores = calculateMemberScores();
 
         // 모든 멤버 조회
         List<MemberEntity> allMembers = memberRepository.findAll();
