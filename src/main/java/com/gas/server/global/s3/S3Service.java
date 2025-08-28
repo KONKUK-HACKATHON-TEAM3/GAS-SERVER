@@ -61,7 +61,7 @@ public class S3Service {
         if (fileName == null || !fileName.contains(".")) {
             throw new BusinessException(ErrorType.INVALID_REQUEST_BODY_ERROR);
         }
-        
+
         return fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase();
     }
 

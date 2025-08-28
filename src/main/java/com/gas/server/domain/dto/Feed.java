@@ -27,6 +27,6 @@ public record Feed(
             final Boolean likeStatus
     ) {
         return new Feed(
-                feedId, profile, nickname, text, imageUrl, likeCount, likeStatus);
+                feedId, profile, nickname, text, imageUrl, tag, likeCount, likeStatus);
     }
 }
