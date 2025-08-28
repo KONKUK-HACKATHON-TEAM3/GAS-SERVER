@@ -35,7 +35,7 @@ public class FeedEntity {
     @Column(name = "text", length = 200)
     private String text;
 
-    @Column(name = "tag", length = 50, nullable = false)
+    @Column(name = "tag", length = 50)
     private String tag;
 
     @CreatedDate

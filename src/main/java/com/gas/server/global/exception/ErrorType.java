@@ -21,6 +21,7 @@ public enum ErrorType {
     INVALID_NICKNAME_ERROR(HttpStatus.BAD_REQUEST, 40008, "이미 존재하는 닉네임입니다."),
     INVALID_PROFILE_TYPE_ERROR(HttpStatus.BAD_REQUEST, 40009, "유효하지 않은 profileType입니다."),
     INVALID_DATE_TIME_FORMAT_ERROR(HttpStatus.BAD_REQUEST, 40010, "날짜/시간 형식이 올바르지 않습니다."),
+    INVALID_TEXT_COUNT_ERROR(HttpStatus.BAD_REQUEST, 40011, "text는 150자 이하여야 합니다."),
 
     /* 404 Not Found */
     NOT_FOUND_PATH_ERROR(HttpStatus.NOT_FOUND, 40401, "존재하지 않는 경로입니다."),

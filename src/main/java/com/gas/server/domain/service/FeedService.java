@@ -11,6 +11,10 @@ import com.gas.server.domain.repository.FeedRepository;
 import com.gas.server.domain.repository.MemberLikeRepository;
 import com.gas.server.domain.repository.MemberRepository;
 import com.gas.server.domain.repository.projection.FeedLikeCount;
+import com.gas.server.global.exception.BusinessException;
+import com.gas.server.global.exception.ErrorType;
+import com.gas.server.global.openai.OpenAIService;
+import com.gas.server.global.s3.S3Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -18,9 +22,13 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class FeedService {
@@ -28,6 +36,8 @@ public class FeedService {
     private final FeedRepository feedRepository;
     private final MemberRepository memberRepository;
     private final MemberLikeRepository memberLikeRepository;
+    private final S3Service s3Service;
+    private final OpenAIService openAIService;
 
     @Transactional(readOnly = true)
     public FeedListResponse getFeeds(final Long memberId, final LocalDate date) {
@@ -105,5 +115,45 @@ public class FeedService {
                 .toList();
 
         return FeedListResponse.of(feedList);
+    }
+
+    @Transactional
+    public void postFeed(Long memberId, MultipartFile media, String text) {
+        // 회원 존재 여부 확인
+        if (!memberRepository.existsById(memberId)) {
+            throw new BusinessException(ErrorType.NOT_FOUND_MEMBER_ERROR);
+        }
+
+        // S3에 파일 업로드
+        String mediaUrl = s3Service.uploadFile(media);
+        log.info("File uploaded to S3: {}", mediaUrl);
+
+        // 태그 생성
+        String tags = null;
+
+        if (s3Service.isImageFile(media)) {
+            // 이미지인 경우 OpenAI Vision API 호출
+            tags = openAIService.generateTags(mediaUrl, text);
+            if (tags != null) {
+                log.info("Generated tags for image: {}", tags);
+            }
+        } else {
+            // 비디오인 경우 텍스트가 있을 때만 태그 생성
+            tags = openAIService.generateTagsForVideo(text);
+            if (tags != null) {
+                log.info("Generated tags for video: {}", tags);
+            }
+        }
+
+        // 피드 엔티티 생성 및 저장
+        FeedEntity feed = FeedEntity.builder()
+                .memberId(memberId)
+                .imageUrl(mediaUrl)
+                .text(text)
+                .tag(tags)
+                .build();
+
+        feedRepository.save(feed);
+        log.info("Feed saved successfully for member: {}", memberId);
     }
 }
