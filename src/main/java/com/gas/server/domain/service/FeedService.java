@@ -292,10 +292,15 @@ public class FeedService {
             LocalDateTime startDateTime = startDate.atStartOfDay();
             LocalDateTime endDateTime = endDate.plusDays(1).atStartOfDay();
 
-            // 해당 월에 피드가 있는 날짜들 조회
-            List<LocalDate> feedDates = feedRepository.findDistinctDatesByCreatedAtBetween(
-                    startDateTime, endDateTime
-            );
+            // 해당 월의 모든 피드 조회
+            List<FeedEntity> feeds = feedRepository.findAllByCreatedAtBetween(startDateTime, endDateTime);
+            
+            // 피드에서 날짜만 추출하여 중복 제거 및 정렬
+            List<LocalDate> feedDates = feeds.stream()
+                    .map(feed -> feed.getCreatedAt().toLocalDate())
+                    .distinct()
+                    .sorted()
+                    .toList();
 
             return FeedDateListResponse.of(feedDates);
         } catch (DateTimeParseException e) {
