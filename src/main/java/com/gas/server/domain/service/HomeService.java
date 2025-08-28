@@ -6,6 +6,7 @@ import com.gas.server.domain.dto.FamilyStory;
 import com.gas.server.domain.dto.HomeResponse;
 import com.gas.server.domain.dto.SignUpResponse;
 import com.gas.server.domain.dto.WeeklyRanking;
+import com.gas.server.domain.dto.WeeklyRankingResponse;
 import com.gas.server.domain.entity.FeedEntity;
 import com.gas.server.domain.entity.MemberEntity;
 import com.gas.server.domain.entity.MemberMissionEntity;
@@ -78,7 +79,7 @@ public class HomeService {
         return HomeResponse.of(dailyMissions, familyStories, weeklyRanking, familyMembers);
     }
 
-    private List<DailyMission> getDailyMissions(Long memberId) {
+    private List<DailyMission> getDailyMissions(final Long memberId) {
         LocalDate today = LocalDate.now();
 
         List<MissionEntity> allMissions = missionRepository.findAll();
@@ -100,7 +101,7 @@ public class HomeService {
                 .toList();
     }
 
-    private List<FamilyStory> getFamilyStories(Long memberId) {
+    private List<FamilyStory> getFamilyStories(final Long memberId) {
         List<FeedEntity> recentFeeds = feedRepository.findAll().stream()
                 .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
                 .limit(4)
@@ -121,7 +122,7 @@ public class HomeService {
                 .toList();
     }
 
-    private WeeklyRanking getWeeklyRanking(Long memberId) {
+    private WeeklyRanking getWeeklyRanking(final Long memberId) {
         List<MemberMissionEntity> allCompletedMissions = memberMissionRepository.findAll();
         List<MissionEntity> allMissions = missionRepository.findAll();
 
@@ -161,7 +162,7 @@ public class HomeService {
         return WeeklyRanking.of(nickname, topScore);
     }
 
-    private List<FamilyMember> getFamilyMembers(Long memberId) {
+    private List<FamilyMember> getFamilyMembers(final Long memberId) {
         List<MemberEntity> allMembers = memberRepository.findAll();
 
         return allMembers.stream()
@@ -173,5 +174,44 @@ public class HomeService {
                     return FamilyMember.of(nickname, member.getProfileType());
                 })
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public WeeklyRankingResponse getRanking(final Long memberId) {
+        if (!memberRepository.existsById(memberId)) {
+            throw new BusinessException(ErrorType.NOT_FOUND_MEMBER_ERROR);
+        }
+
+        List<MemberMissionEntity> allCompletedMissions = memberMissionRepository.findAll();
+        List<MissionEntity> allMissions = missionRepository.findAll();
+
+        // 미션 ID별 포인트 매핑
+        Map<Long, Integer> missionPointsMap = allMissions.stream()
+                .collect(Collectors.toMap(MissionEntity::getId, MissionEntity::getPoint));
+
+        // 멤버별 총 점수 계산
+        Map<Long, Integer> memberScores = allCompletedMissions.stream()
+                .collect(Collectors.groupingBy(
+                        MemberMissionEntity::getMemberId,
+                        Collectors.summingInt(mm -> missionPointsMap.getOrDefault(mm.getMissionId(), 0))
+                ));
+
+        // 모든 멤버 조회
+        List<MemberEntity> allMembers = memberRepository.findAll();
+
+        // 모든 멤버의 점수를 포함한 랭킹 리스트 생성 (점수가 없으면 0점)
+        List<WeeklyRanking> rankings = allMembers.stream()
+                .map(member -> {
+                    Integer score = memberScores.getOrDefault(member.getId(), 0);
+                    String nickname = member.getId().equals(memberId) ? "나" : member.getNickname();
+                    return WeeklyRanking.of(nickname, score);
+                })
+                .sorted((a, b) -> b.score().compareTo(a.score())) // 점수 내림차순 정렬
+                .toList();
+
+        // 이번주 경품
+        String weeklyPrize = "설거지 1회 면제권";
+
+        return WeeklyRankingResponse.of(weeklyPrize, rankings);
     }
 }

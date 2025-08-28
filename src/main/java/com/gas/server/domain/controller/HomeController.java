@@ -3,6 +3,7 @@ package com.gas.server.domain.controller;
 import com.gas.server.domain.dto.HomeResponse;
 import com.gas.server.domain.dto.SignUpRequest;
 import com.gas.server.domain.dto.SignUpResponse;
+import com.gas.server.domain.dto.WeeklyRankingResponse;
 import com.gas.server.domain.enums.ProfileType;
 import com.gas.server.domain.service.HomeService;
 import jakarta.validation.Valid;
@@ -47,6 +48,15 @@ public class HomeController {
     ) {
         return ResponseEntity.ok(
                 homeService.getHome(memberId)
+        );
+    }
+
+    @GetMapping(path = "/ranking", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<WeeklyRankingResponse> getRanking(
+            @RequestParam @Positive(message = "memberId는 양수여야 합니다.") Long memberId
+    ) {
+        return ResponseEntity.ok(
+                homeService.getRanking(memberId)
         );
     }
 }
