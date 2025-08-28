@@ -30,16 +30,21 @@ public class MissionEntity {
     @Column(name = "description", length = 50, nullable = false)
     private String description;
 
+    @Column(name = "route", length = 20)
+    private String route;
+
     @Builder
     public MissionEntity(
             Long id,
             String name,
             Integer point,
-            String description
+            String description,
+            String route
     ) {
         this.id = id;
         this.name = name;
         this.point = point;
         this.description = description;
+        this.route = route;
     }
 }

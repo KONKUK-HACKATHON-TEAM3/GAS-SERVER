@@ -96,7 +96,8 @@ public class HomeService {
                         mission.getName(),
                         mission.getPoint(),
                         mission.getDescription(),
-                        completedMissionIds.contains(mission.getId())
+                        completedMissionIds.contains(mission.getId()),
+                        mission.getRoute()
                 ))
                 .toList();
     }
