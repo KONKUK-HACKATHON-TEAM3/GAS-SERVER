@@ -27,6 +27,8 @@ public class S3Service {
     private String region;
 
     public String uploadFile(MultipartFile multipartFile) {
+        validateFileType(multipartFile);
+        
         String originalFilename = multipartFile.getOriginalFilename();
         String fileExtension = getFileExtension(originalFilename);
         String fileName = generateFileName(fileExtension);
@@ -67,7 +69,17 @@ public class S3Service {
 
     public boolean isImageFile(MultipartFile file) {
         String contentType = file.getContentType();
-
         return contentType != null && contentType.startsWith("image/");
+    }
+
+    public boolean isVideoFile(MultipartFile file) {
+        String contentType = file.getContentType();
+        return contentType != null && contentType.startsWith("video/");
+    }
+
+    private void validateFileType(MultipartFile file) {
+        if (!isImageFile(file) && !isVideoFile(file)) {
+            throw new BusinessException(ErrorType.INVALID_FILE_TYPE_ERROR);
+        }
     }
 }

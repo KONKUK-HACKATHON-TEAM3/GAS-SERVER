@@ -22,6 +22,8 @@ public enum ErrorType {
     INVALID_PROFILE_TYPE_ERROR(HttpStatus.BAD_REQUEST, 40009, "유효하지 않은 profileType입니다."),
     INVALID_DATE_TIME_FORMAT_ERROR(HttpStatus.BAD_REQUEST, 40010, "날짜/시간 형식이 올바르지 않습니다."),
     INVALID_TEXT_COUNT_ERROR(HttpStatus.BAD_REQUEST, 40011, "text는 150자 이하여야 합니다."),
+    MAX_UPLOAD_SIZE_ERROR(HttpStatus.BAD_REQUEST, 40012, "파일 크기는 20MB를 초과할 수 없습니다."),
+    INVALID_FILE_TYPE_ERROR(HttpStatus.BAD_REQUEST, 40013, "이미지 또는 동영상 파일만 업로드 가능합니다."),
 
     /* 404 Not Found */
     NOT_FOUND_PATH_ERROR(HttpStatus.NOT_FOUND, 40401, "존재하지 않는 경로입니다."),

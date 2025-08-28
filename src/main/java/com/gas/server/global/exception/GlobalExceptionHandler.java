@@ -12,6 +12,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
 @Slf4j
@@ -95,6 +96,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(ErrorType.NOT_FOUND_PATH_ERROR.getHttpStatus())
                 .body(ErrorResponse.fail(ErrorType.NOT_FOUND_PATH_ERROR, e.getRequestURL()));
+    }
+
+    // 파일 업로드 크기 초과 시 예외 처리
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException e) {
+        return ResponseEntity
+                .status(ErrorType.MAX_UPLOAD_SIZE_ERROR.getHttpStatus())
+                .body(ErrorResponse.fail(ErrorType.MAX_UPLOAD_SIZE_ERROR));
     }
 
     // 비즈니스 로직에서 발생하는 예외 처리
