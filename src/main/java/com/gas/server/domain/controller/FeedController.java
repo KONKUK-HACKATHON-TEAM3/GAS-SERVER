@@ -62,7 +62,7 @@ public class FeedController {
             @PathVariable @Positive(message = "feedId는 양수여야 합니다.") Long feedId,
             @RequestParam @Positive(message = "memberId는 양수여야 합니다.") Long memberId
     ) {
-        feedService.postLike(memberId, feedId);
+        feedService.postLike(feedId, memberId);
 
         return ResponseEntity.ok().build();
     }
@@ -72,7 +72,7 @@ public class FeedController {
             @PathVariable @Positive(message = "feedId는 양수여야 합니다.") Long feedId,
             @RequestParam @Positive(message = "memberId는 양수여야 합니다.") Long memberId
     ) {
-        feedService.deleteLike(memberId, feedId);
+        feedService.deleteLike(feedId, memberId);
 
         return ResponseEntity.ok().build();
     }
