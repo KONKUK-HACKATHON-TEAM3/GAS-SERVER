@@ -23,8 +23,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -134,37 +136,16 @@ public class FeedService {
         String mediaUrl = s3Service.uploadFile(media);
         log.info("File uploaded to S3: {}", mediaUrl);
 
-        // 태그 생성
-        String tags;
-        boolean foodDetected = false;
-
-        if (s3Service.isImageFile(media)) {
-            // 이미지인 경우 OpenAI Vision API 호출
-            OpenAIService.TagGenerationResult result = openAIService.generateTagsWithFoodDetection(mediaUrl, text);
-            tags = result.getTags();
-            foodDetected = result.isFoodDetected();
-
-            if (tags != null) {
-                log.info("Generated tags for image: {}", tags);
-                if (foodDetected) {
-                    log.info("Food detected in image");
-                }
-            }
-        } else {
-            // 비디오인 경우 텍스트가 있을 때만 태그 생성
-            tags = openAIService.generateTagsForVideo(text);
-            if (tags != null) {
-                log.info("Generated tags for video: {}", tags);
-            }
-        }
-
-        // 피드 엔티티 생성 및 저장
+        // 피드 엔티티 생성 및 저장 (태그는 null로)
         FeedEntity feed = FeedEntity.builder()
                 .memberId(memberId)
                 .imageUrl(mediaUrl)
                 .text(text)
-                .tag(tags)
+                .tag(null)  // 태그는 나중에 비동기로 업데이트
                 .build();
+
+        feed = feedRepository.save(feed);
+        log.info("Feed saved successfully for member: {}", memberId);
 
         // 미션 2: 오늘의 사진 업로드 시 완료
         if (!memberMissionRepository.existsByMemberIdAndMissionIdAndMissionDate(memberId, 2L, LocalDate.now())) {
@@ -178,21 +159,68 @@ public class FeedService {
             log.info("Mission (ID: 2) completed for member: {}", memberId);
         }
 
-        // 미션 3: 음식 사진 업로드 시 완료
-        if (foodDetected &&
-                !memberMissionRepository.existsByMemberIdAndMissionIdAndMissionDate(memberId, 4L, LocalDate.now())) {
-            memberMissionRepository.save(
-                    com.gas.server.domain.entity.MemberMissionEntity.builder()
-                            .memberId(memberId)
-                            .missionId(4L)
-                            .missionDate(LocalDate.now())
-                            .build()
-            );
-            log.info("Mission (ID: 4) completed for member: {}", memberId);
+        // 비동기로 태그 생성 및 업데이트
+        if (s3Service.isImageFile(media)) {
+            Long feedId = feed.getId();
+            CompletableFuture.runAsync(() -> {
+                processTagGenerationAsync(feedId, memberId, mediaUrl, text);
+            });
+        } else if (s3Service.isVideoFile(media) && text != null) {
+            Long feedId = feed.getId();
+            CompletableFuture.runAsync(() -> {
+                processVideoTagGenerationAsync(feedId, text);
+            });
         }
+    }
 
-        feedRepository.save(feed);
-        log.info("Feed saved successfully for member: {}", memberId);
+    @Async
+    @Transactional
+    public void processTagGenerationAsync(Long feedId, Long memberId, String mediaUrl, String text) {
+        try {
+            // OpenAI Vision API 호출
+            OpenAIService.TagGenerationResult result = openAIService.generateTagsWithFoodDetection(mediaUrl, text);
+
+            // 태그 업데이트
+            FeedEntity feed = feedRepository.findById(feedId).orElse(null);
+            if (feed != null && result.getTags() != null) {
+                feed.updateTag(result.getTags());
+                feedRepository.save(feed);
+                log.info("Tags updated for feed {}: {}", feedId, result.getTags());
+            }
+
+            // 음식 감지 시 미션 4 완료
+            if (result.isFoodDetected() &&
+                    !memberMissionRepository.existsByMemberIdAndMissionIdAndMissionDate(memberId, 4L,
+                            LocalDate.now())) {
+                memberMissionRepository.save(
+                        com.gas.server.domain.entity.MemberMissionEntity.builder()
+                                .memberId(memberId)
+                                .missionId(4L)
+                                .missionDate(LocalDate.now())
+                                .build()
+                );
+                log.info("Food mission (ID: 4) completed for member: {}", memberId);
+            }
+        } catch (Exception e) {
+            log.error("Failed to generate tags for feed {}: {}", feedId, e.getMessage());
+        }
+    }
+
+    @Async
+    @Transactional
+    public void processVideoTagGenerationAsync(Long feedId, String text) {
+        try {
+            String tags = openAIService.generateTagsForVideo(text);
+
+            FeedEntity feed = feedRepository.findById(feedId).orElse(null);
+            if (feed != null && tags != null) {
+                feed.updateTag(tags);
+                feedRepository.save(feed);
+                log.info("Video tags updated for feed {}: {}", feedId, tags);
+            }
+        } catch (Exception e) {
+            log.error("Failed to generate video tags for feed {}: {}", feedId, e.getMessage());
+        }
     }
 
     @Transactional

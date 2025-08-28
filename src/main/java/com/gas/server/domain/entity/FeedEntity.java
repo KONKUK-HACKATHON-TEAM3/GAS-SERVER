@@ -42,6 +42,10 @@ public class FeedEntity {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    public void updateTag(String tag) {
+        this.tag = tag;
+    }
+
     @Builder
     public FeedEntity(
             Long id,
