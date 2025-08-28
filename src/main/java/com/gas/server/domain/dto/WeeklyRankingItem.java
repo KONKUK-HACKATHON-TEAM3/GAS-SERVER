@@ -5,10 +5,7 @@ public record WeeklyRankingItem(
         Integer score
 ) {
 
-    public static WeeklyRankingItem of(
-            final String nickname,
-            final Integer score
-    ) {
+    public static WeeklyRankingItem of(final String nickname, final Integer score) {
         return new WeeklyRankingItem(nickname, score);
     }
 }

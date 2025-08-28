@@ -4,12 +4,12 @@ import java.util.List;
 
 public record WeeklyRankingResponse(
         String weeklyPrize,
-        List<WeeklyRanking> weeklyRanking
+        List<WeeklyRankingItem> weeklyRanking
 ) {
 
     public static WeeklyRankingResponse of(
             final String weeklyPrize,
-            final List<WeeklyRanking> weeklyRanking
+            final List<WeeklyRankingItem> weeklyRanking
     ) {
         return new WeeklyRankingResponse(weeklyPrize, weeklyRanking);
     }

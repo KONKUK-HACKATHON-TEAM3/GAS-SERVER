@@ -5,7 +5,7 @@ import com.gas.server.domain.dto.FamilyMember;
 import com.gas.server.domain.dto.FamilyStory;
 import com.gas.server.domain.dto.HomeResponse;
 import com.gas.server.domain.dto.SignUpResponse;
-import com.gas.server.domain.dto.WeeklyRanking;
+import com.gas.server.domain.dto.WeeklyRankingItem;
 import com.gas.server.domain.dto.WeeklyRankingResponse;
 import com.gas.server.domain.entity.FeedEntity;
 import com.gas.server.domain.entity.MemberEntity;
@@ -72,7 +72,7 @@ public class HomeService {
 
         List<FamilyStory> familyStories = getFamilyStories(memberId);
 
-        WeeklyRanking weeklyRanking = getWeeklyRanking(memberId);
+        List<WeeklyRankingItem> weeklyRanking = getWeeklyRankingList(memberId);
 
         List<FamilyMember> familyMembers = getFamilyMembers(memberId);
 
@@ -139,32 +139,22 @@ public class HomeService {
                 ));
     }
 
-    private WeeklyRanking getWeeklyRanking(final Long memberId) {
+    private List<WeeklyRankingItem> calculateAllMemberRankings(final Long requestingMemberId) {
         Map<Long, Integer> memberScores = calculateMemberScores();
-
-        // 가장 높은 점수를 가진 멤버 찾기
-        if (memberScores.isEmpty()) {
-            return WeeklyRanking.of("나", 0);
-        }
-
-        Map.Entry<Long, Integer> topEntry = memberScores.entrySet().stream()
-                .max(Map.Entry.comparingByValue())
-                .orElse(Map.entry(memberId, 0));
-
-        Long topMemberId = topEntry.getKey();
-        Integer topScore = topEntry.getValue();
-
-        // 닉네임 가져오기
-        String nickname;
-
-        if (topMemberId.equals(memberId)) {
-            nickname = "나";
-        } else {
-            MemberEntity topMember = memberRepository.findByIdOrElseThrow(topMemberId);
-            nickname = topMember.getNickname();
-        }
-
-        return WeeklyRanking.of(nickname, topScore);
+        List<MemberEntity> allMembers = memberRepository.findAll();
+        
+        return allMembers.stream()
+                .map(member -> {
+                    Integer score = memberScores.getOrDefault(member.getId(), 0);
+                    String nickname = member.getId().equals(requestingMemberId) ? "나" : member.getNickname();
+                    return WeeklyRankingItem.of(nickname, score);
+                })
+                .sorted((a, b) -> b.score().compareTo(a.score())) // 점수 내림차순 정렬
+                .toList();
+    }
+    
+    private List<WeeklyRankingItem> getWeeklyRankingList(final Long memberId) {
+        return calculateAllMemberRankings(memberId);
     }
 
     private List<FamilyMember> getFamilyMembers(final Long memberId) {
@@ -187,20 +177,7 @@ public class HomeService {
             throw new BusinessException(ErrorType.NOT_FOUND_MEMBER_ERROR);
         }
 
-        Map<Long, Integer> memberScores = calculateMemberScores();
-
-        // 모든 멤버 조회
-        List<MemberEntity> allMembers = memberRepository.findAll();
-
-        // 모든 멤버의 점수를 포함한 랭킹 리스트 생성 (점수가 없으면 0점)
-        List<WeeklyRanking> rankings = allMembers.stream()
-                .map(member -> {
-                    Integer score = memberScores.getOrDefault(member.getId(), 0);
-                    String nickname = member.getId().equals(memberId) ? "나" : member.getNickname();
-                    return WeeklyRanking.of(nickname, score);
-                })
-                .sorted((a, b) -> b.score().compareTo(a.score())) // 점수 내림차순 정렬
-                .toList();
+        List<WeeklyRankingItem> rankings = calculateAllMemberRankings(memberId);
 
         // 이번주 경품
         String weeklyPrize = "설거지 1회 면제권";

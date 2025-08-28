@@ -8,14 +8,14 @@ import java.util.List;
 public record HomeResponse(
         List<DailyMission> dailyMissionList,
         List<FamilyStory> familyStoryList,
-        WeeklyRanking weeklyRanking,
+        List<WeeklyRankingItem> weeklyRanking,
         List<FamilyMember> familyList
 ) {
 
     public static HomeResponse of(
             final List<DailyMission> dailyMissionList,
             final List<FamilyStory> familyStoryList,
-            final WeeklyRanking weeklyRanking,
+            final List<WeeklyRankingItem> weeklyRanking,
             final List<FamilyMember> familyList
     ) {
         return new HomeResponse(dailyMissionList, familyStoryList, weeklyRanking, familyList);
