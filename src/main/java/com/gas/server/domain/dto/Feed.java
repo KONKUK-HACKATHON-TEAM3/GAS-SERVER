@@ -11,8 +11,9 @@ public record Feed(
         String nickname,
         String text,
         String imageUrl,
-        Boolean likeStatus,
-        Integer likeCount
+        String tag,
+        Integer likeCount,
+        Boolean likeStatus
 ) {
 
     public static Feed of(
@@ -21,10 +22,11 @@ public record Feed(
             final String nickname,
             final String text,
             final String imageUrl,
-            final Boolean likeStatus,
-            final Integer likeCount
+            final String tag,
+            final Integer likeCount,
+            final Boolean likeStatus
     ) {
         return new Feed(
-                feedId, profile, nickname, text, imageUrl, likeStatus, likeCount);
+                feedId, profile, nickname, text, imageUrl, likeCount, likeStatus);
     }
 }

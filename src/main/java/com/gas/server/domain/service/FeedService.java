@@ -96,8 +96,9 @@ public class FeedService {
                             displayNickname,
                             feed.getText(),
                             feed.getImageUrl(),
-                            likedFeedIds.contains(feed.getId()),
-                            likeCounts.getOrDefault(feed.getId(), 0)
+                            feed.getTag(),
+                            likeCounts.getOrDefault(feed.getId(), 0),
+                            likedFeedIds.contains(feed.getId())
                     );
                 })
                 .filter(Objects::nonNull)
