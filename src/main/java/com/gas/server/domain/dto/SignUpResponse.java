@@ -4,7 +4,7 @@ public record SignUpResponse(
         Long memberId
 ) {
 
-    public static SignUpResponse of(Long memberId) {
+    public static SignUpResponse of(final Long memberId) {
         return new SignUpResponse(memberId);
     }
 }

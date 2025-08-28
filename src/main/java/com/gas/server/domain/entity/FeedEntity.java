@@ -26,10 +26,13 @@ public class FeedEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "member_id", nullable = false)
+    private Long memberId;
+
     @Column(name = "image_url", columnDefinition = "text", nullable = false)
     private String imageUrl;
 
-    @Column(name = "text", length = 200, nullable = false)
+    @Column(name = "text", length = 200)
     private String text;
 
     @Column(name = "tag", length = 50, nullable = false)
